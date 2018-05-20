@@ -1,3 +1,6 @@
+#include <ThreadController.h>
+#include <Thread.h>
+#include <StaticThreadController.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
@@ -5,20 +8,21 @@
 
 const char* ssid = "Squishyland2ghz";
 const char* password = "squishynchewy";
+Thread OTAThread = Thread();
 
 void setup()
 {
 	pinMode(LED_BUILTIN, OUTPUT);
-	digitalWrite(LED_BUILTIN, LOW);
+
 	Serial.begin(115200);
 	Serial.println("Booting");
 	WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, password);
 	while (WiFi.waitForConnectResult() != WL_CONNECTED)
 	{
-		Serial.println("Connection Failed! Rebooting...");
-		delay(5000);
-		ESP.restart();
+		Serial.println("Waiting for Connection");
+		delay(2500);
+		//ESP.restart();
 	}
 
 	// Port defaults to 8266
@@ -51,11 +55,22 @@ void setup()
 	Serial.println("Ready");
 	Serial.print("IP address: ");
 	Serial.println(WiFi.localIP());
-	digitalWrite(LED_BUILTIN, HIGH);
+
+	OTAThread.onRun(OTAHandler);
+	OTAThread.setInterval(2000);
+
 }
 
 // Add the main program code into the continuous loop() function
 void loop()
 {
+	if (OTAThread.shouldRun()) OTAThread.run();
+}
+
+void OTAHandler()
+{
+	digitalWrite(LED_BUILTIN, LOW);
 	ArduinoOTA.handle();
+	delay(50);
+	digitalWrite(LED_BUILTIN, HIGH);
 }
