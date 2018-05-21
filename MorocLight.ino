@@ -23,8 +23,10 @@ void setup()
 	{
 		WiFi.begin(ssid, password);
 		Serial.println("Waiting for Connection");
-		delay(2500);
-		ESP.reset();
+		if (WiFi.waitForConnectResult() != WL_CONNECTED)
+		{
+			ESP.reset();
+		}
 	}
 
 	Serial.println("Connection Made");
