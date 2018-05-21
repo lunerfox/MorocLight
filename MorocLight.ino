@@ -1,3 +1,4 @@
+#include <Adafruit_NeoPixel.h>
 #include <ThreadController.h>
 #include <Thread.h>
 #include <StaticThreadController.h>
@@ -17,13 +18,16 @@ void setup()
 	Serial.begin(115200);
 	Serial.println("Booting");
 	WiFi.mode(WIFI_STA);
-	WiFi.begin(ssid, password);
+	
 	while (WiFi.waitForConnectResult() != WL_CONNECTED)
 	{
+		WiFi.begin(ssid, password);
 		Serial.println("Waiting for Connection");
 		delay(2500);
-		//ESP.restart();
+		ESP.reset();
 	}
+
+	Serial.println("Connection Made");
 
 	// Port defaults to 8266
 	ArduinoOTA.setPort(8266);
@@ -58,12 +62,13 @@ void setup()
 
 	OTAThread.onRun(OTAHandler);
 	OTAThread.setInterval(2000);
-
+	Serial.print("Starting Main Loop");
 }
 
 // Add the main program code into the continuous loop() function
 void loop()
 {
+	
 	if (OTAThread.shouldRun()) OTAThread.run();
 }
 
