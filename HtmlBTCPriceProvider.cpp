@@ -40,6 +40,11 @@ bool HtmlBTCPriceProvider::IsConnectionOk()
 	return (BTCTicker_payload != "");
 }
 
+bool HtmlBTCPriceProvider::IsTrendingUp()
+{
+	return currentBTCPrice > averagedBTCPrice;
+}
+
 void HtmlBTCPriceProvider::ParsePrice()
 {
 	DynamicJsonBuffer jsonBuffer(bufferSize);

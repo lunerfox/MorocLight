@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ArduinoJson/ArduinoJson.h"
+#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 
@@ -13,6 +13,7 @@ public:
 	float GetAveragedPrice();
 	float currentBTCPrice = -1;
 	bool IsConnectionOk();
+	bool IsTrendingUp();
 
 private:
 	float sampleSizeOld, sampleSizeNew;
