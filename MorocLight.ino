@@ -20,9 +20,10 @@ const char* password = "squishynchewy";
 float curPrice;
 
 //Workers
-Thread OTAThread = Thread();
+Thread OTAServiceThread = Thread();
 Thread WebServerThread = Thread();
 Thread BTCTickerThread = Thread();
+Thread NeoPixelDisplayThread = Thread();
 
 ESP8266WebServer server = ESP8266WebServer(80);
 HtmlBTCPriceProvider ticker = HtmlBTCPriceProvider(120);
@@ -94,8 +95,11 @@ void setup()
 	initialize_WebServer();
 	Serial.println("WebServer Configured");
 
-	OTAThread.onRun(OTAHandler);
-	OTAThread.setInterval(2000);
+	NeoPixelDisplayThread.onRun(NeoPixelDisplayHandler);
+	NeoPixelDisplayThread.setInterval(100);
+
+	OTAServiceThread.onRun(OTAServiceHandler);
+	OTAServiceThread.setInterval(2000);
 	
 	WebServerThread.onRun(WebServerHandler);
 	WebServerThread.setInterval(250);
@@ -108,15 +112,16 @@ void setup()
 	Serial.print("Starting Main Loop");
 }
 
-// Add the main program code into the continuous loop() function
+// Evaluate the threads to see which one needs to be run.
 void loop()
 {
 	if (WebServerThread.shouldRun()) WebServerThread.run();
-	if (OTAThread.shouldRun()) OTAThread.run();
+	if (OTAServiceThread.shouldRun()) OTAServiceThread.run();
 	if (BTCTickerThread.shouldRun()) BTCTickerThread.run();
+	if (NeoPixelDisplayThread.shouldRun()) NeoPixelDisplayThread.run();
 }
 
-void OTAHandler()
+void OTAServiceHandler()
 {
 	digitalWrite(LED_BUILTIN, LOW);
 	ArduinoOTA.handle();
@@ -129,6 +134,17 @@ void WebServerHandler()
 	server.handleClient();
 }
 
+void BTCTickerHandler()
+{
+	ticker.UpdatePrice();
+	curPrice = ticker.currentBTCPrice;
+}
+
+void NeoPixelDisplayHandler()
+{
+
+}
+
 void WebServerProcessRoot()
 {
 	String response;
@@ -139,16 +155,9 @@ void WebServerProcessRoot()
 		response += " Real-time $" + String(ticker.currentBTCPrice);
 	}
 	else
-	{ 
+	{
 		response = "Error: Failed to retrieve data from API.";
 	}
 
 	server.send(200, "text/plain", response);
-		
-}
-
-void BTCTickerHandler()
-{
-	ticker.UpdatePrice();
-	curPrice = ticker.currentBTCPrice;
 }
