@@ -6,10 +6,22 @@
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+#include "HtmlBTCPriceProvider.h"
 
 const char* ssid = "Squishyland2ghz";
 const char* password = "squishynchewy";
+
+float curPrice;
+
+//Workers
 Thread OTAThread = Thread();
+Thread WebServerThread = Thread();
+Thread BTCTickerThread = Thread();
+
+ESP8266WebServer server = ESP8266WebServer(80);
+HtmlBTCPriceProvider ticker = HtmlBTCPriceProvider(120);
 
 void setup()
 {
@@ -64,14 +76,27 @@ void setup()
 
 	OTAThread.onRun(OTAHandler);
 	OTAThread.setInterval(2000);
+
+	server.on("/", WebServerProcessRoot);
+	server.begin();
+
+	WebServerThread.onRun(WebServerHandler);
+	WebServerThread.setInterval(250);
+
+	BTCTickerThread.onRun(BTCTickerHandler);
+	BTCTickerThread.setInterval(30000);
+
+	BTCTickerThread.run();
+
 	Serial.print("Starting Main Loop");
 }
 
 // Add the main program code into the continuous loop() function
 void loop()
 {
-	
+	if (WebServerThread.shouldRun()) WebServerThread.run();
 	if (OTAThread.shouldRun()) OTAThread.run();
+	if (BTCTickerThread.shouldRun()) BTCTickerThread.run();
 }
 
 void OTAHandler()
@@ -80,4 +105,32 @@ void OTAHandler()
 	ArduinoOTA.handle();
 	delay(50);
 	digitalWrite(LED_BUILTIN, HIGH);
+}
+
+void WebServerHandler()
+{
+	server.handleClient();
+}
+
+void WebServerProcessRoot()
+{
+	String response;
+	if (ticker.IsConnectionOk())
+	{
+		float curPrice = ticker.GetAveragedPrice();
+		response = "Moroc Light Reporting In: [BTC/USD] $" + String(curPrice);	
+	}
+	else
+	{ 
+		response = "Error: Failed to retrieve data from API.";
+	}
+
+	server.send(200, "text/plain", response);
+		
+}
+
+void BTCTickerHandler()
+{
+	ticker.UpdatePrice();
+	curPrice = ticker.currentBTCPrice;
 }
