@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Adafruit_NeoPixel.h>
 #include <ThreadController.h>
 #include <Thread.h>
@@ -8,6 +10,8 @@
 #include <ArduinoOTA.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
+#include <ArduinoJson.h>
+
 #include "HtmlBTCPriceProvider.h"
 
 const char* ssid = "Squishyland2ghz";
@@ -23,14 +27,10 @@ Thread BTCTickerThread = Thread();
 ESP8266WebServer server = ESP8266WebServer(80);
 HtmlBTCPriceProvider ticker = HtmlBTCPriceProvider(120);
 
-void setup()
+void initialize_Wifi()
 {
-	pinMode(LED_BUILTIN, OUTPUT);
-
-	Serial.begin(115200);
-	Serial.println("Booting");
 	WiFi.mode(WIFI_STA);
-	
+
 	while (WiFi.waitForConnectResult() != WL_CONNECTED)
 	{
 		WiFi.begin(ssid, password);
@@ -40,9 +40,10 @@ void setup()
 			ESP.reset();
 		}
 	}
+}
 
-	Serial.println("Connection Made");
-
+void initialize_OTA()
+{
 	// Port defaults to 8266
 	ArduinoOTA.setPort(8266);
 
@@ -70,24 +71,40 @@ void setup()
 		else if (error == OTA_END_ERROR) Serial.println("End Failed");
 	});
 	ArduinoOTA.begin();
-	Serial.println("Ready");
+}
+
+void initialize_WebServer()
+{
+	server.on("/", WebServerProcessRoot);
+	server.begin();
+}
+
+void setup()
+{
+	pinMode(LED_BUILTIN, OUTPUT);
+
+	Serial.begin(115200);
+	Serial.println("Booting");
+	initialize_Wifi();
+	Serial.println("Connection Made");
+	initialize_OTA();
+	Serial.println("OTA Ready");
 	Serial.print("IP address: ");
 	Serial.println(WiFi.localIP());
+	initialize_WebServer();
+	Serial.println("WebServer Configured");
 
 	OTAThread.onRun(OTAHandler);
 	OTAThread.setInterval(2000);
-
-	server.on("/", WebServerProcessRoot);
-	server.begin();
-
+	
 	WebServerThread.onRun(WebServerHandler);
 	WebServerThread.setInterval(250);
 
 	BTCTickerThread.onRun(BTCTickerHandler);
 	BTCTickerThread.setInterval(30000);
 
+	//Initialize the BTC Ticker
 	BTCTickerThread.run();
-
 	Serial.print("Starting Main Loop");
 }
 
@@ -117,8 +134,9 @@ void WebServerProcessRoot()
 	String response;
 	if (ticker.IsConnectionOk())
 	{
-		float curPrice = ticker.GetAveragedPrice();
-		response = "Moroc Light Reporting In: [BTC/USD] $" + String(curPrice);	
+		response = "Moroc Light Reporting In [BTC / USD]: ";
+		response += " Last Hour $" + String(ticker.GetAveragedPrice());
+		response += " Real-time $" + String(ticker.currentBTCPrice);
 	}
 	else
 	{ 
