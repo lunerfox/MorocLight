@@ -63,6 +63,6 @@ void HtmlBTCPriceProvider::ParsePrice()
 	}
 	else
 	{
-		averagedBTCPrice = (averagedBTCPrice * sampleSizeOld) + (averagedBTCPrice * sampleSizeNew);
+		averagedBTCPrice = (averagedBTCPrice * sampleSizeOld) + (currentBTCPrice * sampleSizeNew);
 	}
 }
