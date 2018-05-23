@@ -13,6 +13,7 @@
 #include <ArduinoJson.h>
 
 #include "HtmlBTCPriceProvider.h"
+#include "NeoPixelRingLightController.h"
 
 const char* ssid = "Squishyland2ghz";
 const char* password = "squishynchewy";
@@ -27,19 +28,18 @@ Thread NeoPixelDisplayThread = Thread();
 
 ESP8266WebServer server = ESP8266WebServer(80);
 HtmlBTCPriceProvider ticker = HtmlBTCPriceProvider(120);
+NeoPixelRingLightController pixels = NeoPixelRingLightController(D5, 16);
 
 void initialize_Wifi()
 {
+	Serial.println("Configuring Wifi");
 	WiFi.mode(WIFI_STA);
+	WiFi.begin(ssid, password);
 
-	while (WiFi.waitForConnectResult() != WL_CONNECTED)
-	{
+	while (WiFi.waitForConnectResult() != WL_CONNECTED) {
 		WiFi.begin(ssid, password);
-		Serial.println("Waiting for Connection");
-		if (WiFi.waitForConnectResult() != WL_CONNECTED)
-		{
-			ESP.reset();
-		}
+		Serial.println("Retrying connection...");
+		delay(2500);
 	}
 }
 
@@ -86,6 +86,10 @@ void setup()
 
 	Serial.begin(115200);
 	Serial.println("Booting");
+
+	Serial.println("Setup Neo Pixels");
+	pixels.Begin();
+
 	initialize_Wifi();
 	Serial.println("Connection Made");
 	initialize_OTA();
@@ -106,10 +110,12 @@ void setup()
 
 	BTCTickerThread.onRun(BTCTickerHandler);
 	BTCTickerThread.setInterval(30000);
+	
+	pixels.SetAllLightsColor(pixels.GetColor(120, 120, 120));
 
 	//Initialize the BTC Ticker
 	BTCTickerThread.run();
-	Serial.print("Starting Main Loop");
+	Serial.println("Starting Main Loop");
 }
 
 // Evaluate the threads to see which one needs to be run.
@@ -118,11 +124,13 @@ void loop()
 	if (WebServerThread.shouldRun()) WebServerThread.run();
 	if (OTAServiceThread.shouldRun()) OTAServiceThread.run();
 	if (BTCTickerThread.shouldRun()) BTCTickerThread.run();
-	if (NeoPixelDisplayThread.shouldRun()) NeoPixelDisplayThread.run();
+	//if (NeoPixelDisplayThread.shouldRun()) NeoPixelDisplayThread.run();
+	NeoPixelDisplayThread.run();
 }
 
 void OTAServiceHandler()
 {
+	Serial.println("OTA Handling");
 	digitalWrite(LED_BUILTIN, LOW);
 	ArduinoOTA.handle();
 	delay(50);
@@ -131,18 +139,20 @@ void OTAServiceHandler()
 
 void WebServerHandler()
 {
+	Serial.println("Server Handling");
 	server.handleClient();
 }
 
 void BTCTickerHandler()
 {
+	Serial.println("Ticker Handling");
 	ticker.UpdatePrice();
 	curPrice = ticker.currentBTCPrice;
 }
 
 void NeoPixelDisplayHandler()
 {
-
+	pixels.UpdateRingLight();
 }
 
 void WebServerProcessRoot()
