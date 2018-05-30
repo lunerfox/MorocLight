@@ -9,7 +9,7 @@ NeoPixelRingLightController::NeoPixelRingLightController(int pin, int numberOfPi
 
 NeoPixelRingLightController::~NeoPixelRingLightController()
 {
-
+	
 }
 
 void NeoPixelRingLightController::SetRingLightColor(int position, uint32_t color)
@@ -27,7 +27,40 @@ void NeoPixelRingLightController::SetAllLightsColor(uint32_t color)
 
 void NeoPixelRingLightController::UpdateRingLight()
 {
-		pixels.show();
+	switch (mode)
+	{
+		case MANUAL:
+			pixels.show();
+			break;
+		case ANIM_PROCESSING:
+			break;
+		case ANIM_PULSING:
+			break;
+		case ANIM_NORMAL:
+			break;
+		default:
+			pixels.show();
+			break;
+	}
+}
+
+void NeoPixelRingLightController::ChangeLightMode(LIGHTMODE newMode)
+{
+	mode = newMode;
+	//Depending on the mode being entered, we should do some initialization.
+	switch (mode)
+	{
+		case MANUAL:
+			break;
+		case ANIM_PROCESSING:
+			break;
+		case ANIM_PULSING:
+			break;
+		case ANIM_NORMAL:
+			break;
+		default:
+			break;
+	}
 }
 
 uint32_t NeoPixelRingLightController::GetColor(uint8_t r, uint8_t g, uint8_t b)
