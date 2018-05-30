@@ -1,10 +1,12 @@
 #include "Arduino.h"
 #include "NeoPixelRingLightController.h"
 
+
 NeoPixelRingLightController::NeoPixelRingLightController(int pin, int numberOfPixels)
 {
 	assignedPin = pin;
 	assignedPixels = numberOfPixels;
+	rotatingPos = RotatingIntegerProvider(numberOfPixels, 0);
 }
 
 NeoPixelRingLightController::~NeoPixelRingLightController()
@@ -33,6 +35,10 @@ void NeoPixelRingLightController::UpdateRingLight()
 			pixels.show();
 			break;
 		case ANIM_PROCESSING:
+			SetAllLightsColor(pixels.Color(0, 0, 0));
+			SetRingLightColor(rotatingPos.Value(), pixels.Color(0, 0, 200));
+			rotatingPos.Step();
+			pixels.show();
 			break;
 		case ANIM_PULSING:
 			break;

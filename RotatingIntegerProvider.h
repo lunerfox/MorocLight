@@ -2,6 +2,7 @@
 class RotatingIntegerProvider
 {
 public:
+	RotatingIntegerProvider();
 	RotatingIntegerProvider(int size, int start);
 	~RotatingIntegerProvider();
 	void Step(int steps = 1);

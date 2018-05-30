@@ -1,5 +1,10 @@
 #include "RotatingIntegerProvider.h"
 
+RotatingIntegerProvider::RotatingIntegerProvider()
+{
+
+}
+
 RotatingIntegerProvider::RotatingIntegerProvider(int size, int start = 0)
 {
 	maximum = size;

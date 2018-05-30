@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Adafruit_NeoPixel.h>
+#include "RotatingIntegerProvider.h"
 
 class NeoPixelRingLightController
 {
@@ -16,6 +17,7 @@ public:
 	void Begin();
 private:
 	LIGHTMODE mode;
+	RotatingIntegerProvider rotatingPos = RotatingIntegerProvider();
 	Adafruit_NeoPixel pixels;
 	int assignedPin;
 	int assignedPixels;

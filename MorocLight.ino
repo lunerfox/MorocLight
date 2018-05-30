@@ -12,6 +12,7 @@
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 
+#include "RotatingIntegerProvider.h"
 #include "HtmlBTCPriceProvider.h"
 #include "NeoPixelRingLightController.h"
 
@@ -21,6 +22,7 @@ const char* password = "squishynchewy";
 float curPrice;
 
 //Workers
+Thread SetupThread = Thread();
 Thread OTAServiceThread = Thread();
 Thread WebServerThread = Thread();
 Thread BTCTickerThread = Thread();
@@ -30,26 +32,24 @@ ESP8266WebServer server = ESP8266WebServer(80);
 HtmlBTCPriceProvider ticker = HtmlBTCPriceProvider(120);
 NeoPixelRingLightController pixels = NeoPixelRingLightController(D7, 16);
 
+int timeSinceLastWifiConnect = 0;
+
 void initialize_Wifi()
 {
 	const int maximum_attempts = 5;
-	int attempts = 0;
 	Serial.println("Configuring Wifi");
 	WiFi.mode(WIFI_STA);
-	do
+
+	Serial.println("Connecting...");
+	WiFi.begin(ssid, password);
+	timeSinceLastWifiConnect++;
+	if (timeSinceLastWifiConnect > maximum_attempts && WiFi.status() != WL_CONNECTED)
 	{
-		Serial.println("Connecting...");
-		WiFi.begin(ssid, password);
-		delay(2500);
-		attempts++;
-		if (attempts > maximum_attempts)
-		{
-			Serial.println("No response. Resetting...");
-			digitalWrite(D6, LOW);
-			delay(5000);
-			digitalWrite(D6, HIGH);
-		}
-	} while (WiFi.status() != WL_CONNECTED);
+		Serial.println("No response. Resetting...");
+		digitalWrite(D6, LOW);
+		delay(5000);
+		digitalWrite(D6, HIGH);
+	}
 	Serial.println("Connected");
 }
 
@@ -106,6 +106,45 @@ void setup()
 	pixels.SetAllLightsColor(pixels.GetColor(255, 0, 0));
 	pixels.UpdateRingLight();
 
+	SetupThread.onRun(SetupHandler);
+	SetupThread.setInterval(2500);
+
+	NeoPixelDisplayThread.onRun(NeoPixelDisplayHandler);
+	NeoPixelDisplayThread.setInterval(100);
+
+	OTAServiceThread.onRun(OTAServiceHandler);
+	OTAServiceThread.setInterval(2000);
+	
+	WebServerThread.onRun(WebServerHandler);
+	WebServerThread.setInterval(250);
+
+	BTCTickerThread.onRun(BTCTickerHandler);
+	BTCTickerThread.setInterval(30000);
+
+	//Initialize the BTC Ticker
+	BTCTickerThread.run();
+	Serial.println("Starting Main Loop");
+}
+
+// Evaluate the threads to see which one needs to be run.
+void loop()
+{
+	if (SetupThread.shouldRun()) SetupThread.run();
+	if (NeoPixelDisplayThread.shouldRun()) NeoPixelDisplayThread.run();
+
+	//Once it's setup, run the other web-dependent threads.
+	if (!SetupThread.enabled)
+	{
+		if (WebServerThread.shouldRun()) WebServerThread.run();
+		if (OTAServiceThread.shouldRun()) OTAServiceThread.run();
+		if (BTCTickerThread.shouldRun()) BTCTickerThread.run();
+	}
+}
+
+void SetupHandler()
+{
+	pixels.ChangeLightMode(NeoPixelRingLightController::ANIM_PROCESSING);
+	Serial.println("Setup Handling");
 	initialize_Wifi();
 	Serial.println("Connection Made");
 	//initialize_OTA();
@@ -146,31 +185,7 @@ void setup()
 
 	pixels.SetAllLightsColor(pixels.GetColor(0, 0, 200));
 	pixels.UpdateRingLight();
-
-	NeoPixelDisplayThread.onRun(NeoPixelDisplayHandler);
-	NeoPixelDisplayThread.setInterval(100);
-
-	OTAServiceThread.onRun(OTAServiceHandler);
-	OTAServiceThread.setInterval(2000);
-	
-	WebServerThread.onRun(WebServerHandler);
-	WebServerThread.setInterval(250);
-
-	BTCTickerThread.onRun(BTCTickerHandler);
-	BTCTickerThread.setInterval(30000);
-
-	//Initialize the BTC Ticker
-	BTCTickerThread.run();
-	Serial.println("Starting Main Loop");
-}
-
-// Evaluate the threads to see which one needs to be run.
-void loop()
-{
-	if (WebServerThread.shouldRun()) WebServerThread.run();
-	if (OTAServiceThread.shouldRun()) OTAServiceThread.run();
-	if (BTCTickerThread.shouldRun()) BTCTickerThread.run();
-	if (NeoPixelDisplayThread.shouldRun()) NeoPixelDisplayThread.run();
+	SetupThread.enabled = false;
 }
 
 void OTAServiceHandler()
