@@ -27,12 +27,7 @@ void NeoPixelRingLightController::SetAllLightsColor(uint32_t color)
 
 void NeoPixelRingLightController::UpdateRingLight()
 {
-	for (uint16_t i = 0; i<pixels.numPixels(); i++) 
-	{
-		pixels.setPixelColor(i, pixels.Color(100, 100, 100));
 		pixels.show();
-		delay(20);
-	}
 }
 
 uint32_t NeoPixelRingLightController::GetColor(uint8_t r, uint8_t g, uint8_t b)
@@ -42,7 +37,7 @@ uint32_t NeoPixelRingLightController::GetColor(uint8_t r, uint8_t g, uint8_t b)
 
 void NeoPixelRingLightController::Begin()
 {
-	pixels = Adafruit_NeoPixel(assignedPixels, assignedPin, NEO_RGB + NEO_KHZ400);
+	pixels = Adafruit_NeoPixel(assignedPixels, assignedPin, NEO_GRB + NEO_KHZ800);
 	pixels.begin(); // This initializes the NeoPixel library.
 	pixels.clear();
 }

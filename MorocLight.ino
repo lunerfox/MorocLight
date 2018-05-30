@@ -28,19 +28,29 @@ Thread NeoPixelDisplayThread = Thread();
 
 ESP8266WebServer server = ESP8266WebServer(80);
 HtmlBTCPriceProvider ticker = HtmlBTCPriceProvider(120);
-NeoPixelRingLightController pixels = NeoPixelRingLightController(D5, 16);
+NeoPixelRingLightController pixels = NeoPixelRingLightController(D7, 16);
 
 void initialize_Wifi()
 {
+	const int maximum_attempts = 5;
+	int attempts = 0;
 	Serial.println("Configuring Wifi");
 	WiFi.mode(WIFI_STA);
-	WiFi.begin(ssid, password);
-
-	while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+	do
+	{
+		Serial.println("Connecting...");
 		WiFi.begin(ssid, password);
-		Serial.println("Retrying connection...");
 		delay(2500);
-	}
+		attempts++;
+		if (attempts > maximum_attempts)
+		{
+			Serial.println("No response. Resetting...");
+			digitalWrite(D6, LOW);
+			delay(5000);
+			digitalWrite(D6, HIGH);
+		}
+	} while (WiFi.status() != WL_CONNECTED);
+	Serial.println("Connected");
 }
 
 void initialize_OTA()
@@ -82,22 +92,60 @@ void initialize_WebServer()
 
 void setup()
 {
+	pinMode(D0, OUTPUT);
+	pinMode(D6, OUTPUT);
+	digitalWrite(D6, HIGH);
 	pinMode(LED_BUILTIN, OUTPUT);
+	pinMode(D7, OUTPUT);
 
 	Serial.begin(115200);
 	Serial.println("Booting");
 
 	Serial.println("Setup Neo Pixels");
 	pixels.Begin();
+	pixels.SetAllLightsColor(pixels.GetColor(255, 0, 0));
+	pixels.UpdateRingLight();
 
 	initialize_Wifi();
 	Serial.println("Connection Made");
-	initialize_OTA();
-	Serial.println("OTA Ready");
+	//initialize_OTA();
+	//Serial.println("OTA Ready");
+
+	// Port defaults to 8266
+	ArduinoOTA.setPort(8266);
+
+	// Hostname defaults to esp8266-[ChipID]
+	ArduinoOTA.setHostname("Moroc-Light");
+
+	// No authentication by default
+	// ArduinoOTA.setPassword((const char *)"123");
+
+	ArduinoOTA.onStart([]() {
+		Serial.println("Start");
+	});
+	ArduinoOTA.onEnd([]() {
+		Serial.println("\nEnd");
+	});
+	ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+		Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+	});
+	ArduinoOTA.onError([](ota_error_t error) {
+		Serial.printf("Error[%u]: ", error);
+		if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+		else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+		else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+		else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+		else if (error == OTA_END_ERROR) Serial.println("End Failed");
+	});
+	ArduinoOTA.begin();
+
 	Serial.print("IP address: ");
 	Serial.println(WiFi.localIP());
 	initialize_WebServer();
 	Serial.println("WebServer Configured");
+
+	pixels.SetAllLightsColor(pixels.GetColor(0, 0, 200));
+	pixels.UpdateRingLight();
 
 	NeoPixelDisplayThread.onRun(NeoPixelDisplayHandler);
 	NeoPixelDisplayThread.setInterval(100);
@@ -110,8 +158,6 @@ void setup()
 
 	BTCTickerThread.onRun(BTCTickerHandler);
 	BTCTickerThread.setInterval(30000);
-	
-	pixels.SetAllLightsColor(pixels.GetColor(120, 120, 120));
 
 	//Initialize the BTC Ticker
 	BTCTickerThread.run();
@@ -124,8 +170,7 @@ void loop()
 	if (WebServerThread.shouldRun()) WebServerThread.run();
 	if (OTAServiceThread.shouldRun()) OTAServiceThread.run();
 	if (BTCTickerThread.shouldRun()) BTCTickerThread.run();
-	//if (NeoPixelDisplayThread.shouldRun()) NeoPixelDisplayThread.run();
-	NeoPixelDisplayThread.run();
+	if (NeoPixelDisplayThread.shouldRun()) NeoPixelDisplayThread.run();
 }
 
 void OTAServiceHandler()
