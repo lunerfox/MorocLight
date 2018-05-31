@@ -28,10 +28,13 @@ int RotatingIntegerProvider::Value()
 
 int RotatingIntegerProvider::Previous(int steps = 1)
 {
-	return (position + steps) % maximum;
+	int val = (position - steps);
+	if (val >= 0) return val % maximum;
+	else return maximum + val;
 }
 
 int RotatingIntegerProvider::Next(int steps = 1)
 {
-	return (position - steps) % maximum;
+	int val = (position + steps);
+	return val % maximum;
 }

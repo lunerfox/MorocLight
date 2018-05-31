@@ -29,6 +29,7 @@ void NeoPixelRingLightController::SetAllLightsColor(uint32_t color)
 
 void NeoPixelRingLightController::UpdateRingLight()
 {
+	int maxIntensity = 200;
 	switch (mode)
 	{
 		case MANUAL:
@@ -36,7 +37,11 @@ void NeoPixelRingLightController::UpdateRingLight()
 			break;
 		case ANIM_PROCESSING:
 			SetAllLightsColor(pixels.Color(0, 0, 0));
-			SetRingLightColor(rotatingPos.Value(), pixels.Color(0, 0, 200));
+			SetRingLightColor(rotatingPos.Value(), pixels.Color(0, 0, maxIntensity));
+			SetRingLightColor(rotatingPos.Previous(1), pixels.Color(0, 0, maxIntensity / 2));
+			SetRingLightColor(rotatingPos.Previous(2), pixels.Color(0, 0, maxIntensity / 8));
+			SetRingLightColor(rotatingPos.Previous(3), pixels.Color(0, 0, maxIntensity / 16));
+			SetRingLightColor(rotatingPos.Previous(4), pixels.Color(0, 0, maxIntensity / 32));
 			rotatingPos.Step();
 			pixels.show();
 			break;
