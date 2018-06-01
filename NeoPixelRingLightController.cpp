@@ -7,6 +7,7 @@ NeoPixelRingLightController::NeoPixelRingLightController(int pin, int numberOfPi
 	assignedPin = pin;
 	assignedPixels = numberOfPixels;
 	rotatingPos = RotatingIntegerProvider(numberOfPixels, 0);
+	cosineValue = CosineIntegerProvider(0, 255);
 }
 
 NeoPixelRingLightController::~NeoPixelRingLightController()
@@ -27,9 +28,13 @@ void NeoPixelRingLightController::SetAllLightsColor(uint32_t color)
 	}
 }
 
-void NeoPixelRingLightController::UpdateRingLight()
+void NeoPixelRingLightController::UpdateRingLight(double timeStep)
 {
 	int maxIntensity = 200;
+	int intensity = cosineValue.Value();
+	uint32_t Red = pixels.Color(255, 0, 0);
+	uint32_t Green = pixels.Color(0, 255, 0);
+
 	switch (mode)
 	{
 		case MANUAL:
@@ -46,8 +51,18 @@ void NeoPixelRingLightController::UpdateRingLight()
 			pixels.show();
 			break;
 		case ANIM_PULSING:
+			cosineValue.Update(timeStep);
+			SetAllLightsColor(pixels.Color(intensity, 0, 0));
+			pixels.show();
 			break;
 		case ANIM_NORMAL:
+			//This is used to show the normal application's animation.
+			SetAllLightsColor(Red);
+			SetRingLightColor(1, Green);
+			SetRingLightColor(5, Green);
+			SetRingLightColor(12, Green);
+			SetRingLightColor(8, Green);
+			pixels.show();
 			break;
 		default:
 			pixels.show();
@@ -57,6 +72,8 @@ void NeoPixelRingLightController::UpdateRingLight()
 
 void NeoPixelRingLightController::ChangeLightMode(LIGHTMODE newMode)
 {
+	//Reject duplicate commands.
+	if (mode == newMode) return;
 	mode = newMode;
 	//Depending on the mode being entered, we should do some initialization.
 	switch (mode)
@@ -84,4 +101,6 @@ void NeoPixelRingLightController::Begin()
 	pixels = Adafruit_NeoPixel(assignedPixels, assignedPin, NEO_GRB + NEO_KHZ800);
 	pixels.begin(); // This initializes the NeoPixel library.
 	pixels.clear();
+	SetAllLightsColor(pixels.Color(0, 0, 0));
+	pixels.show();
 }
